@@ -1,7 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Calendar, Clock, MapPin, User, Save, X, Users, Search, Check, FileDown } from 'lucide-react';
+import { Plus, Edit, Trash2, Calendar, Clock, MapPin, User, Save, X, Users, Search, Check, FileDown, Image } from 'lucide-react';
 import { Program, RegisteredStudent } from '../types';
 import { downloadAttendanceSheet, AttendeeEntry } from '../utils/attendanceSheetGenerator';
+import { HomepageImageManager } from './HomepageImageManager';
+
+interface HomepageImage {
+  id: string;
+  src: string;
+  alt: string;
+  type: 'left' | 'right';
+}
 
 interface TeacherPortalProps {
   programs: Program[];
@@ -10,6 +18,9 @@ interface TeacherPortalProps {
   onEditProgram: (id: string, program: Omit<Program, 'id' | 'createdAt' | 'updatedAt'>) => void;
   onDeleteProgram: (id: string) => void;
   onAddParticipants: (programId: string, studentIds: string[]) => void;
+  homepageLeftImages?: HomepageImage[];
+  homepageRightImages?: HomepageImage[];
+  onUpdateHomepageImages?: (leftImages: HomepageImage[], rightImages: HomepageImage[]) => void;
 }
 
 export const TeacherPortal: React.FC<TeacherPortalProps> = ({
@@ -19,6 +30,9 @@ export const TeacherPortal: React.FC<TeacherPortalProps> = ({
   onEditProgram,
   onDeleteProgram,
   onAddParticipants,
+  homepageLeftImages: propLeftImages,
+  homepageRightImages: propRightImages,
+  onUpdateHomepageImages,
 }) => {
   const [showForm, setShowForm] = useState(false);
   const [editingProgram, setEditingProgram] = useState<Program | null>(null);
@@ -44,6 +58,27 @@ export const TeacherPortal: React.FC<TeacherPortalProps> = ({
   const [attendees, setAttendees] = useState<AttendeeEntry[]>([]);
   const [newAttendeeName, setNewAttendeeName] = useState('');
   const [newAttendeeRemark, setNewAttendeeRemark] = useState('');
+
+  // Homepage image management state
+  const [showImageManager, setShowImageManager] = useState(false);
+  
+  // Use props with fallback to default images
+  const leftImages = propLeftImages || [
+    { id: '1', src: '/download.png', alt: 'NSS Activity 1', type: 'left' as const },
+    { id: '2', src: '/mamo-logo.png', alt: 'NSS Activity 2', type: 'left' as const },
+    { id: '3', src: '/download.png', alt: 'NSS Activity 3', type: 'left' as const },
+    { id: '4', src: '/mamo-logo.png', alt: 'NSS Activity 4', type: 'left' as const },
+    { id: '5', src: '/download.png', alt: 'NSS Activity 5', type: 'left' as const },
+    { id: '6', src: '/mamo-logo.png', alt: 'NSS Activity 6', type: 'left' as const },
+  ];
+  const rightImages = propRightImages || [
+    { id: '7', src: '/mamo-logo.png', alt: 'NSS Activity 7', type: 'right' as const },
+    { id: '8', src: '/download.png', alt: 'NSS Activity 8', type: 'right' as const },
+    { id: '9', src: '/mamo-logo.png', alt: 'NSS Activity 9', type: 'right' as const },
+    { id: '10', src: '/download.png', alt: 'NSS Activity 10', type: 'right' as const },
+    { id: '11', src: '/mamo-logo.png', alt: 'NSS Activity 11', type: 'right' as const },
+    { id: '12', src: '/download.png', alt: 'NSS Activity 12', type: 'right' as const },
+  ];
 
   // Auto-populate attendees when both department and program are selected
   useEffect(() => {
@@ -178,6 +213,12 @@ export const TeacherPortal: React.FC<TeacherPortalProps> = ({
     });
   };
 
+  const handleUpdateImages = (newLeftImages: typeof leftImages, newRightImages: typeof rightImages) => {
+    if (onUpdateHomepageImages) {
+      onUpdateHomepageImages(newLeftImages, newRightImages);
+    }
+  };
+
   const sortedPrograms = [...programs].sort((a, b) => 
     new Date(b.date).getTime() - new Date(a.date).getTime()
   );
@@ -206,6 +247,13 @@ export const TeacherPortal: React.FC<TeacherPortalProps> = ({
           >
             <Plus size={20} />
             <span>Add New Program</span>
+          </button>
+          <button
+            onClick={() => setShowImageManager(true)}
+            className="bg-emerald-600 text-white px-6 py-3 rounded-lg hover:bg-emerald-700 transition-colors flex items-center space-x-2 shadow-lg"
+          >
+            <Image size={20} />
+            <span>Manage Homepage Images</span>
           </button>
           <button
             onClick={() => {
@@ -798,6 +846,30 @@ export const TeacherPortal: React.FC<TeacherPortalProps> = ({
             )}
           </div>
         </div>
+
+        {/* Homepage Image Manager Modal */}
+        {showImageManager && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
+                <h2 className="text-xl font-bold text-gray-900">Homepage Image Management</h2>
+                <button
+                  onClick={() => setShowImageManager(false)}
+                  className="text-gray-500 hover:text-gray-700 transition-colors"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+              <div className="p-6">
+                <HomepageImageManager
+                  leftImages={leftImages}
+                  rightImages={rightImages}
+                  onUpdateImages={handleUpdateImages}
+                />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

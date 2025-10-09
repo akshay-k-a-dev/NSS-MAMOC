@@ -98,6 +98,24 @@ function App() {
     { id: 'dept-11', name: 'Economics', isActive: true, createdAt: new Date().toISOString() },
   ]);
 
+  // Homepage image management
+  const [homepageLeftImages, setHomepageLeftImages] = useState([
+    { id: '1', src: '/download.png', alt: 'NSS Activity 1', type: 'left' as const },
+    { id: '2', src: '/mamo-logo.png', alt: 'NSS Activity 2', type: 'left' as const },
+    { id: '3', src: '/download.png', alt: 'NSS Activity 3', type: 'left' as const },
+    { id: '4', src: '/mamo-logo.png', alt: 'NSS Activity 4', type: 'left' as const },
+    { id: '5', src: '/download.png', alt: 'NSS Activity 5', type: 'left' as const },
+    { id: '6', src: '/mamo-logo.png', alt: 'NSS Activity 6', type: 'left' as const },
+  ]);
+  const [homepageRightImages, setHomepageRightImages] = useState([
+    { id: '7', src: '/mamo-logo.png', alt: 'NSS Activity 7', type: 'right' as const },
+    { id: '8', src: '/download.png', alt: 'NSS Activity 8', type: 'right' as const },
+    { id: '9', src: '/mamo-logo.png', alt: 'NSS Activity 9', type: 'right' as const },
+    { id: '10', src: '/download.png', alt: 'NSS Activity 10', type: 'right' as const },
+    { id: '11', src: '/mamo-logo.png', alt: 'NSS Activity 11', type: 'right' as const },
+    { id: '12', src: '/download.png', alt: 'NSS Activity 12', type: 'right' as const },
+  ]);
+
   // Program Officer credentials (hardcoded for demo)
   const [officerCredentials, setOfficerCredentials] = useState({ id: 'OFFICER001', password: 'NSS@OFFICER2025' });
 
@@ -422,7 +440,7 @@ function App() {
   const renderCurrentView = () => {
     switch (currentView) {
       case 'home':
-        return <HomePage programs={programs} />;
+        return <HomePage programs={programs} leftImages={homepageLeftImages} rightImages={homepageRightImages} />;
       case 'programs':
         return <ProgramsPage programs={programs} />;
       case 'stories':
@@ -484,6 +502,12 @@ function App() {
               onEditProgram={handleEditProgram}
               onDeleteProgram={handleDeleteProgram}
               onAddParticipants={handleAddParticipants}
+              homepageLeftImages={homepageLeftImages}
+              homepageRightImages={homepageRightImages}
+              onUpdateHomepageImages={(leftImages, rightImages) => {
+                setHomepageLeftImages(leftImages);
+                setHomepageRightImages(rightImages);
+              }}
             />
           );
         }

@@ -1,38 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Calendar, Clock, MapPin, User, Save, X, Users, Search, Check, FileDown, Image } from 'lucide-react';
-import { Program, RegisteredStudent } from '../types';
+import { Plus, Edit, Trash2, Calendar, Clock, MapPin, User, Save, X, Users, Search, Check, FileDown } from 'lucide-react';
+import { Program, RegisteredStudent, Coordinator } from '../types';
 import { downloadAttendanceSheet, AttendeeEntry } from '../utils/attendanceSheetGenerator';
-import { HomepageImageManager } from './HomepageImageManager';
-
-interface HomepageImage {
-  id: string;
-  src: string;
-  alt: string;
-  type: 'left' | 'right';
-}
 
 interface TeacherPortalProps {
   programs: Program[];
   registeredStudents: RegisteredStudent[];
+  coordinators: Coordinator[];
   onAddProgram: (program: Omit<Program, 'id' | 'createdAt' | 'updatedAt'>) => void;
   onEditProgram: (id: string, program: Omit<Program, 'id' | 'createdAt' | 'updatedAt'>) => void;
   onDeleteProgram: (id: string) => void;
   onAddParticipants: (programId: string, studentIds: string[]) => void;
-  homepageLeftImages?: HomepageImage[];
-  homepageRightImages?: HomepageImage[];
-  onUpdateHomepageImages?: (leftImages: HomepageImage[], rightImages: HomepageImage[]) => void;
 }
 
 export const TeacherPortal: React.FC<TeacherPortalProps> = ({
   programs,
   registeredStudents,
+  coordinators,
   onAddProgram,
   onEditProgram,
   onDeleteProgram,
   onAddParticipants,
-  homepageLeftImages: propLeftImages,
-  homepageRightImages: propRightImages,
-  onUpdateHomepageImages,
 }) => {
   const [showForm, setShowForm] = useState(false);
   const [editingProgram, setEditingProgram] = useState<Program | null>(null);
@@ -45,6 +33,7 @@ export const TeacherPortal: React.FC<TeacherPortalProps> = ({
     date: '',
     time: '',
     venue: '',
+    coordinator: '',
     coordinatorIds: [] as string[],
   });
 
@@ -59,26 +48,7 @@ export const TeacherPortal: React.FC<TeacherPortalProps> = ({
   const [newAttendeeName, setNewAttendeeName] = useState('');
   const [newAttendeeRemark, setNewAttendeeRemark] = useState('');
 
-  // Homepage image management state
-  const [showImageManager, setShowImageManager] = useState(false);
-  
-  // Use props with fallback to default images
-  const leftImages = propLeftImages || [
-    { id: '1', src: '/download.png', alt: 'NSS Activity 1', type: 'left' as const },
-    { id: '2', src: '/mamo-logo.png', alt: 'NSS Activity 2', type: 'left' as const },
-    { id: '3', src: '/download.png', alt: 'NSS Activity 3', type: 'left' as const },
-    { id: '4', src: '/mamo-logo.png', alt: 'NSS Activity 4', type: 'left' as const },
-    { id: '5', src: '/download.png', alt: 'NSS Activity 5', type: 'left' as const },
-    { id: '6', src: '/mamo-logo.png', alt: 'NSS Activity 6', type: 'left' as const },
-  ];
-  const rightImages = propRightImages || [
-    { id: '7', src: '/mamo-logo.png', alt: 'NSS Activity 7', type: 'right' as const },
-    { id: '8', src: '/download.png', alt: 'NSS Activity 8', type: 'right' as const },
-    { id: '9', src: '/mamo-logo.png', alt: 'NSS Activity 9', type: 'right' as const },
-    { id: '10', src: '/download.png', alt: 'NSS Activity 10', type: 'right' as const },
-    { id: '11', src: '/mamo-logo.png', alt: 'NSS Activity 11', type: 'right' as const },
-    { id: '12', src: '/download.png', alt: 'NSS Activity 12', type: 'right' as const },
-  ];
+
 
   // Auto-populate attendees when both department and program are selected
   useEffect(() => {
@@ -99,11 +69,16 @@ export const TeacherPortal: React.FC<TeacherPortalProps> = ({
   };
 
   const handleStudentToggle = (studentId: string) => {
-    setSelectedStudentIds(prev => 
-      prev.includes(studentId) 
-        ? prev.filter(id => id !== studentId)
-        : [...prev, studentId]
-    );
+    const newSelectedIds = selectedStudentIds.includes(studentId) 
+      ? selectedStudentIds.filter(id => id !== studentId)
+      : [...selectedStudentIds, studentId];
+    
+    setSelectedStudentIds(newSelectedIds);
+    
+    // Apply changes immediately if we have a program selected
+    if (showParticipantSelection) {
+      onAddParticipants(showParticipantSelection, newSelectedIds);
+    }
   };
 
   const handleCoordinatorToggle = (studentId: string) => {
@@ -114,15 +89,6 @@ export const TeacherPortal: React.FC<TeacherPortalProps> = ({
     );
   };
 
-  const handleConfirmParticipants = () => {
-    if (showParticipantSelection) {
-      onAddParticipants(showParticipantSelection, selectedStudentIds);
-      setShowParticipantSelection(null);
-      setSelectedStudentIds([]);
-      setSearchTerm('');
-    }
-  };
-
   const handleConfirmCoordinators = () => {
     setFormData(prev => ({ ...prev, coordinatorIds: selectedCoordinatorIds }));
     setShowCoordinatorSelection(false);
@@ -131,14 +97,32 @@ export const TeacherPortal: React.FC<TeacherPortalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Set the coordinator field to the first selected coordinator's name
+    const firstCoordinatorId = formData.coordinatorIds[0];
+    const firstCoordinator = coordinators.find(c => c.id === firstCoordinatorId);
+    const coordinatorName = firstCoordinator ? firstCoordinator.name : '';
+    
+    const programData = {
+      ...formData,
+      coordinator: coordinatorName,
+      // Map old interface fields to new interface
+      startDate: formData.date,
+      endDate: formData.date, // For single-day events, end date same as start
+      department: formData.venue || '', // Use venue as department for backward compatibility
+      type: 'community-service' as const,
+      participantIds: [],
+      maxParticipants: 50, // Default value
+      registrationOpen: true // Default value
+    };
+    
     if (editingProgram) {
-      onEditProgram(editingProgram.id, formData);
+      onEditProgram(editingProgram.id, programData);
       setEditingProgram(null);
     } else {
-      onAddProgram(formData);
+      onAddProgram(programData);
     }
     
-    setFormData({ title: '', description: '', date: '', time: '', venue: '', coordinatorIds: [] });
+    setFormData({ title: '', description: '', date: '', time: '', venue: '', coordinator: '', coordinatorIds: [] });
     setShowForm(false);
   };
 
@@ -146,10 +130,11 @@ export const TeacherPortal: React.FC<TeacherPortalProps> = ({
     setEditingProgram(program);
     setFormData({
       title: program.title,
-      description: program.description,
-      date: program.date,
-      time: program.time,
-      venue: program.venue,
+      description: program.description || '',
+      date: program.startDate || program.date || '',
+      time: program.endDate ? new Date(program.endDate).toLocaleTimeString() : (program.time || ''),
+      venue: program.department || program.venue || '',
+      coordinator: program.coordinator || '',
       coordinatorIds: program.coordinatorIds || [],
     });
     setShowForm(true);
@@ -158,7 +143,7 @@ export const TeacherPortal: React.FC<TeacherPortalProps> = ({
   const handleCancel = () => {
     setShowForm(false);
     setEditingProgram(null);
-    setFormData({ title: '', description: '', date: '', time: '', venue: '', coordinatorIds: [] });
+    setFormData({ title: '', description: '', date: '', time: '', venue: '', coordinator: '', coordinatorIds: [] });
   };
 
   const filteredStudents = registeredStudents.filter(student =>
@@ -167,38 +152,51 @@ export const TeacherPortal: React.FC<TeacherPortalProps> = ({
     student.id.includes(searchTerm)
   ).sort((a, b) => parseInt(a.id) - parseInt(b.id));
 
+  const filteredCoordinators = coordinators.filter(coordinator =>
+    coordinator.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    coordinator.department.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    coordinator.id.includes(searchTerm)
+  ).sort((a, b) => a.name.localeCompare(b.name));
+
   const allFilteredSelected =
     filteredStudents.length > 0 &&
     filteredStudents.every(student => selectedStudentIds.includes(student.id));
 
   const allFilteredCoordinatorsSelected =
-    filteredStudents.length > 0 &&
-    filteredStudents.every(student => selectedCoordinatorIds.includes(student.id));
+    filteredCoordinators.length > 0 &&
+    filteredCoordinators.every(coordinator => selectedCoordinatorIds.includes(coordinator.id));
 
   const handleToggleSelectAllFiltered = () => {
-    setSelectedStudentIds(previousSelectedIds => {
-      if (filteredStudents.length === 0) return previousSelectedIds;
+    const newSelectedIds = (() => {
+      if (filteredStudents.length === 0) return selectedStudentIds;
 
       const filteredIdSet = new Set(filteredStudents.map(s => s.id));
-      const isAllSelected = Array.from(filteredIdSet).every(id => previousSelectedIds.includes(id));
+      const isAllSelected = Array.from(filteredIdSet).every(id => selectedStudentIds.includes(id));
 
       if (isAllSelected) {
         // Deselect all filtered
-        return previousSelectedIds.filter(id => !filteredIdSet.has(id));
+        return selectedStudentIds.filter(id => !filteredIdSet.has(id));
       }
 
       // Select all filtered (merge, avoid duplicates)
-      const merged = new Set(previousSelectedIds);
+      const merged = new Set(selectedStudentIds);
       filteredStudents.forEach(s => merged.add(s.id));
       return Array.from(merged);
-    });
+    })();
+    
+    setSelectedStudentIds(newSelectedIds);
+    
+    // Apply changes immediately if we have a program selected
+    if (showParticipantSelection) {
+      onAddParticipants(showParticipantSelection, newSelectedIds);
+    }
   };
 
   const handleToggleSelectAllCoordinators = () => {
     setSelectedCoordinatorIds(previousSelectedIds => {
-      if (filteredStudents.length === 0) return previousSelectedIds;
+      if (filteredCoordinators.length === 0) return previousSelectedIds;
 
-      const filteredIdSet = new Set(filteredStudents.map(s => s.id));
+      const filteredIdSet = new Set(filteredCoordinators.map(c => c.id));
       const isAllSelected = Array.from(filteredIdSet).every(id => previousSelectedIds.includes(id));
 
       if (isAllSelected) {
@@ -208,25 +206,21 @@ export const TeacherPortal: React.FC<TeacherPortalProps> = ({
 
       // Select all filtered (merge, avoid duplicates)
       const merged = new Set(previousSelectedIds);
-      filteredStudents.forEach(s => merged.add(s.id));
+      filteredCoordinators.forEach(c => merged.add(c.id));
       return Array.from(merged);
     });
   };
 
-  const handleUpdateImages = (newLeftImages: typeof leftImages, newRightImages: typeof rightImages) => {
-    if (onUpdateHomepageImages) {
-      onUpdateHomepageImages(newLeftImages, newRightImages);
-    }
-  };
+
 
   const sortedPrograms = [...programs].sort((a, b) => 
-    new Date(b.date).getTime() - new Date(a.date).getTime()
+    new Date(b.startDate || b.date || '').getTime() - new Date(a.startDate || a.date || '').getTime()
   );
 
   const getCoordinatorNames = (coordinatorIds: string[]) => {
     return coordinatorIds.map(id => {
-      const student = registeredStudents.find(s => s.id === id);
-      return student ? `${student.name} (ID: ${student.id})` : `ID: ${id}`;
+      const coordinator = coordinators.find(c => c.id === id);
+      return coordinator ? `${coordinator.name} (${coordinator.department})` : `ID: ${id}`;
     }).join(', ');
   };
 
@@ -248,13 +242,7 @@ export const TeacherPortal: React.FC<TeacherPortalProps> = ({
             <Plus size={20} />
             <span>Add New Program</span>
           </button>
-          <button
-            onClick={() => setShowImageManager(true)}
-            className="bg-emerald-600 text-white px-6 py-3 rounded-lg hover:bg-emerald-700 transition-colors flex items-center space-x-2 shadow-lg"
-          >
-            <Image size={20} />
-            <span>Manage Homepage Images</span>
-          </button>
+
           <button
             onClick={() => {
               // Reset state so previous session details don't persist
@@ -396,98 +384,109 @@ export const TeacherPortal: React.FC<TeacherPortalProps> = ({
         {/* Coordinator Selection Modal */}
         {showCoordinatorSelection && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl max-w-4xl w-full max-h-[80vh] overflow-hidden">
-              <div className="p-6 border-b border-gray-200">
-                <div className="flex justify-between items-center mb-4">
+            <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+              <div className="p-4 sm:p-6 border-b border-gray-200">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4">
                   <div>
                     <h3 className="text-lg font-bold text-gray-900">Select Coordinators</h3>
-                    <p className="text-gray-600">Choose students to coordinate this program</p>
+                    <p className="text-gray-600 text-sm">Choose students to coordinate this program</p>
                   </div>
                   <button 
                     onClick={() => setShowCoordinatorSelection(false)}
-                    className="text-gray-500 hover:text-gray-700"
+                    className="text-gray-500 hover:text-gray-700 self-end sm:self-auto"
                   >
                     <X size={24} />
                   </button>
                 </div>
                 
-                <div className="relative">
-                  <Search className="absolute left-3 top-3 text-gray-400" size={20} />
-                  <input
-                    type="text"
-                    placeholder="Search students by name, department, or ID..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-                <div className="mt-3 flex justify-end">
-                  <button
-                    onClick={handleToggleSelectAllCoordinators}
-                    className="px-4 py-2 text-sm rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100"
-                  >
-                    {allFilteredCoordinatorsSelected ? 'Deselect All' : 'Select All'}
-                  </button>
+                <div className="space-y-3">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-3 text-gray-400" size={20} />
+                    <input
+                      type="text"
+                      placeholder="Search coordinators by name, department, or ID..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+                    <div className="text-sm text-gray-600">
+                      {selectedCoordinatorIds.length} of {filteredCoordinators.length} coordinators selected
+                    </div>
+                    <button
+                      onClick={handleToggleSelectAllCoordinators}
+                      className="px-4 py-2 text-sm rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 self-start sm:self-auto"
+                    >
+                      {allFilteredCoordinatorsSelected ? 'Deselect All' : 'Select All'}
+                    </button>
+                  </div>
                 </div>
               </div>
               
-              <div className="p-6 overflow-y-auto max-h-[50vh]">
-                {filteredStudents.length === 0 ? (
+              <div className="p-4 sm:p-6 overflow-y-auto max-h-[60vh]">
+                {filteredCoordinators.length === 0 ? (
                   <div className="text-center py-8">
                     <Users size={48} className="mx-auto text-gray-400 mb-4" />
-                    <p className="text-xl text-gray-500">No students found</p>
-                    <p className="text-gray-400">
-                      {searchTerm ? 'Try adjusting your search terms' : 'No students have been registered by the Program Officer yet'}
+                    <p className="text-xl text-gray-500">No coordinators found</p>
+                    <p className="text-gray-400 text-sm">
+                      {searchTerm ? 'Try adjusting your search terms' : 'No coordinators have been registered by the Program Officer yet'}
                     </p>
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {filteredStudents.map((student) => (
-                      <div key={student.id} className="bg-gray-50 p-4 rounded-lg flex items-center justify-between">
-                        <div className="flex items-center space-x-4">
+                    {filteredCoordinators.map((coordinator) => (
+                      <div key={coordinator.id} className="bg-gray-50 p-3 sm:p-4 rounded-lg">
+                        <div className="flex items-start sm:items-center gap-3">
                           <input
                             type="checkbox"
-                            checked={selectedCoordinatorIds.includes(student.id)}
-                            onChange={() => handleCoordinatorToggle(student.id)}
-                            className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
+                            checked={selectedCoordinatorIds.includes(coordinator.id)}
+                            onChange={() => handleCoordinatorToggle(coordinator.id)}
+                            className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500 mt-1 sm:mt-0"
                           />
-                          <div className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-bold">
-                            ID: {student.id}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
+                              <div className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-bold w-fit">
+                                ID: {coordinator.id}
+                              </div>
+                              <h4 className="font-semibold text-gray-900 truncate">{coordinator.name}</h4>
+                            </div>
+                            <p className="text-sm text-gray-600">
+                              {coordinator.department} • {coordinator.position}
+                            </p>
                           </div>
-                          <div>
-                            <h4 className="font-semibold text-gray-900">{student.name}</h4>
-                            <p className="text-sm text-gray-600">{student.department}</p>
-                          </div>
+                          {selectedCoordinatorIds.includes(coordinator.id) && (
+                            <div className="text-green-600 flex-shrink-0">
+                              <Check size={20} />
+                            </div>
+                          )}
                         </div>
-                        {selectedCoordinatorIds.includes(student.id) && (
-                          <div className="text-green-600">
-                            <Check size={20} />
-                          </div>
-                        )}
                       </div>
                     ))}
                   </div>
                 )}
               </div>
               
-              <div className="p-6 border-t border-gray-200 flex justify-between items-center">
-                <div className="text-sm text-gray-600">
-                  {selectedCoordinatorIds.length} of {filteredStudents.length} students selected
-                </div>
-                <div className="flex space-x-3">
-                  <button
-                    onClick={() => setShowCoordinatorSelection(false)}
-                    className="px-4 py-2 text-gray-600 hover:text-gray-800"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleConfirmCoordinators}
-                    className="bg-blue-700 text-white px-6 py-2 rounded-lg hover:bg-blue-800 transition-colors flex items-center space-x-2"
-                  >
-                    <Check size={16} />
-                    <span>Confirm Coordinators</span>
-                  </button>
+              <div className="p-4 sm:p-6 border-t border-gray-200">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <div className="text-sm text-gray-600">
+                    {selectedCoordinatorIds.length} of {filteredCoordinators.length} coordinators selected
+                  </div>
+                  <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                    <button
+                      onClick={() => setShowCoordinatorSelection(false)}
+                      className="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleConfirmCoordinators}
+                      className="bg-blue-700 text-white px-6 py-2 rounded-lg hover:bg-blue-800 transition-colors flex items-center justify-center space-x-2"
+                    >
+                      <Check size={16} />
+                      <span>Confirm Coordinators</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -577,17 +576,14 @@ export const TeacherPortal: React.FC<TeacherPortalProps> = ({
                 </div>
                 <div className="flex space-x-3">
                   <button
-                    onClick={() => setShowParticipantSelection(null)}
-                    className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                    onClick={() => {
+                      setShowParticipantSelection(null);
+                      setSelectedStudentIds([]);
+                      setSearchTerm('');
+                    }}
+                    className="bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700 transition-colors"
                   >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleConfirmParticipants}
-                    className="bg-blue-700 text-white px-6 py-2 rounded-lg hover:bg-blue-800 transition-colors flex items-center space-x-2"
-                  >
-                    <Check size={16} />
-                    <span>Confirm Participants</span>
+                    Close
                   </button>
                 </div>
               </div>
@@ -633,7 +629,7 @@ export const TeacherPortal: React.FC<TeacherPortalProps> = ({
                     >
                       <option value="">Select program</option>
                       {sortedPrograms.map(p => (
-                        <option key={p.id} value={p.id}>{p.title} — {new Date(p.date).toLocaleDateString()}</option>
+                        <option key={p.id} value={p.id}>{p.title} — {new Date(p.startDate || p.date || '').toLocaleDateString()}</option>
                       ))}
                     </select>
                   </div>
@@ -641,10 +637,66 @@ export const TeacherPortal: React.FC<TeacherPortalProps> = ({
               </div>
 
               <div className="p-6 overflow-y-auto max-h-[50vh]">
-                {/* Attendee editor */}
+                {/* Student Selection Dropdown (only after department filter) */}
+                {selectedDepartment && (
+                  <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Quick Add from Department Students</label>
+                    <div className="flex items-end gap-3">
+                      <div className="flex-1">
+                        <select
+                          value=""
+                          onChange={(e) => {
+                            const studentId = e.target.value;
+                            if (!studentId) return;
+                            const student = registeredStudents.find(s => s.id === studentId);
+                            if (!student) return;
+                            
+                            // Check if student is already in attendees list
+                            const alreadyAdded = attendees.some(a => a.name === student.name);
+                            if (alreadyAdded) {
+                              alert('Student is already in the attendees list');
+                              return;
+                            }
+                            
+                            setAttendees(prev => [...prev, { name: student.name, remark: undefined }]);
+                          }}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        >
+                          <option value="">Select student from {selectedDepartment}</option>
+                          {registeredStudents
+                            .filter(s => s.department === selectedDepartment)
+                            .sort((a, b) => a.name.localeCompare(b.name))
+                            .map(student => (
+                              <option key={student.id} value={student.id}>
+                                {student.name} ({student.id})
+                              </option>
+                            ))}
+                        </select>
+                      </div>
+                      <button
+                        onClick={() => {
+                          // Add all students from selected department
+                          const departmentStudents = registeredStudents
+                            .filter(s => s.department === selectedDepartment)
+                            .filter(s => !attendees.some(a => a.name === s.name)); // Avoid duplicates
+                          
+                          setAttendees(prev => [
+                            ...prev,
+                            ...departmentStudents.map(s => ({ name: s.name, remark: undefined }))
+                          ]);
+                        }}
+                        className="px-5 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
+                      >
+                        Add All
+                      </button>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Manual Attendee Editor */}
                 <div className="flex items-end gap-3 mb-4">
                   <div className="flex-1">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Add Student Name</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Add Student Name (Manual)</label>
                     <input
                       type="text"
                       value={newAttendeeName}
@@ -775,11 +827,11 @@ export const TeacherPortal: React.FC<TeacherPortalProps> = ({
                       <div className="flex items-center space-x-3 mb-3">
                         <h3 className="text-lg font-bold text-gray-900">{program.title}</h3>
                         <div className={`px-3 py-1 rounded-full text-sm font-medium ${
-                          new Date(program.date) >= new Date()
+                          new Date(program.startDate || program.date || '') >= new Date()
                             ? 'bg-emerald-100 text-emerald-700'
                             : 'bg-gray-100 text-gray-600'
                         }`}>
-                          {new Date(program.date) >= new Date() ? 'Upcoming' : 'Completed'}
+                          {new Date(program.startDate || program.date || '') >= new Date() ? 'Upcoming' : 'Completed'}
                         </div>
                         {program.participantIds && program.participantIds.length > 0 && (
                           <div className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-medium flex items-center space-x-1">
@@ -794,11 +846,11 @@ export const TeacherPortal: React.FC<TeacherPortalProps> = ({
                       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm text-gray-600">
                         <div className="flex items-center space-x-2">
                           <Calendar size={16} />
-                          <span>{new Date(program.date).toLocaleDateString()}</span>
+                          <span>{new Date(program.startDate || program.date || '').toLocaleDateString()}</span>
                         </div>
                         <div className="flex items-center space-x-2">
                           <Clock size={16} />
-                          <span>{program.time}</span>
+                          <span>{program.endDate ? new Date(program.endDate).toLocaleDateString() : (program.time || 'TBD')}</span>
                         </div>
                         <div className="flex items-center space-x-2">
                           <MapPin size={16} />
@@ -847,29 +899,7 @@ export const TeacherPortal: React.FC<TeacherPortalProps> = ({
           </div>
         </div>
 
-        {/* Homepage Image Manager Modal */}
-        {showImageManager && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
-                <h2 className="text-xl font-bold text-gray-900">Homepage Image Management</h2>
-                <button
-                  onClick={() => setShowImageManager(false)}
-                  className="text-gray-500 hover:text-gray-700 transition-colors"
-                >
-                  <X size={24} />
-                </button>
-              </div>
-              <div className="p-6">
-                <HomepageImageManager
-                  leftImages={leftImages}
-                  rightImages={rightImages}
-                  onUpdateImages={handleUpdateImages}
-                />
-              </div>
-            </div>
-          </div>
-        )}
+
       </div>
     </div>
   );

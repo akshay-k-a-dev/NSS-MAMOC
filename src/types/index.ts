@@ -1,15 +1,23 @@
 export interface Program {
   id: string;
   title: string;
-  description: string;
-  date: string;
-  time: string;
-  venue: string;
-  coordinatorIds: string[]; // Array of student IDs who are coordinators
+  description?: string;
+  type: string;
+  startDate: string;
+  endDate: string;
+  maxParticipants: number;
+  registrationOpen: boolean;
+  department: string;
+  coordinator: string; // Name of the coordinator
+  participantIds: string[]; // Array of student IDs who are participants
   createdAt: string;
-  updatedAt: string;
+  // Legacy fields for backward compatibility
+  date?: string;
+  time?: string;
+  venue?: string;
+  coordinatorIds?: string[];
+  updatedAt?: string;
   students?: Student[];
-  participantIds?: string[]; // Array of student IDs who are participants
 }
 
 export interface Student {
@@ -26,8 +34,12 @@ export interface Student {
 export interface RegisteredStudent {
   id: string; // Custom alphanumeric ID
   name: string;
+  email: string;
+  phone: string;
   department: string;
-  password: string;
+  year: string;
+  enrollmentNumber: string;
+  password?: string; // Optional for frontend use
   createdAt: string;
   profileImageUrl?: string; // Optional profile picture
 }
@@ -35,8 +47,22 @@ export interface RegisteredStudent {
 export interface Coordinator {
   id: string;
   name: string;
+  email: string;
+  phone: string;
   department: string;
-  password: string;
+  position: string;
+  password?: string; // Optional for frontend use
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface OfficerCredential {
+  id: string;
+  username: string;
+  passwordHash: string;
+  name: string;
+  email: string;
+  role: string;
   isActive: boolean;
   createdAt: string;
 }
@@ -84,28 +110,3 @@ export interface Department {
   createdAt: string;
 }
 
-// STORIES gallery types
-export type MediaType = 'image' | 'video';
-
-export interface StoryMediaItem {
-  id: string;
-  type: MediaType;
-  url: string;
-  title?: string;
-  createdAt: string;
-}
-
-export interface StoryAlbum {
-  id: string;
-  name: string; // e.g., program folder name
-  media: StoryMediaItem[];
-  createdAt: string;
-}
-
-export interface StoryBatch {
-  id: string;
-  name: string; // e.g., 2024-25 Batch
-  albums: StoryAlbum[];
-  featuredMediaIds: string[]; // selected for top slider
-  createdAt: string;
-}

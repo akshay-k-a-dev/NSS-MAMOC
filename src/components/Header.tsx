@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { Calendar, LogIn, LogOut, Menu, X } from 'lucide-react';
 
 interface HeaderProps {
-  currentView: 'home' | 'programs' | 'stories' | 'login' | 'student' | 'coordinator' | 'officer';
-  onViewChange: (view: 'home' | 'programs' | 'stories' | 'login' | 'student' | 'coordinator' | 'officer') => void;
+  currentView: 'home' | 'programs' | 'login' | 'student' | 'coordinator' | 'officer';
+  onViewChange: (view: 'home' | 'programs' | 'login' | 'student' | 'coordinator' | 'officer') => void;
   isLoggedIn?: boolean;
   onLogout?: () => void;
   userInfo?: { name: string; type: string };
@@ -22,7 +22,7 @@ export const Header: React.FC<HeaderProps> = ({
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
 
-  const handleMobileNavigation = (view: 'home' | 'programs' | 'stories' | 'login' | 'student' | 'coordinator' | 'officer') => {
+  const handleMobileNavigation = (view: 'home' | 'programs' | 'login' | 'student' | 'coordinator' | 'officer') => {
     onViewChange(view);
     setIsMobileMenuOpen(false);
   };
@@ -73,19 +73,7 @@ export const Header: React.FC<HeaderProps> = ({
               <span>Programs</span>
             </button>
 
-            {/* STORIES (only when logged in) */}
-            {isLoggedIn && (
-              <button
-                onClick={() => onViewChange('stories')}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-                  currentView === 'stories'
-                    ? 'bg-blue-700 text-white shadow-md'
-                    : 'text-gray-600 hover:text-blue-700 hover:bg-blue-50'
-                }`}
-              >
-                <span>Stories</span>
-              </button>
-            )}
+
             
             {/* Show Coordinator Portal button for officer login */}
             {isLoggedIn && userInfo?.type === 'officer' && (
@@ -186,19 +174,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <span>Programs</span>
               </button>
 
-              {/* Stories Button - only when logged in */}
-              {isLoggedIn && (
-                <button
-                  onClick={() => handleMobileNavigation('stories')}
-                  className={`w-full text-left px-4 py-3 rounded-lg font-medium transition-all duration-200 ${
-                    currentView === 'stories'
-                      ? 'bg-blue-700 text-white shadow-md'
-                      : 'text-gray-600 hover:text-blue-700 hover:bg-blue-50'
-                  }`}
-                >
-                  Stories
-                </button>
-              )}
+
 
               {/* Login/Portal Buttons based on authentication status */}
               {!isLoggedIn ? (

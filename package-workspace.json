@@ -1,0 +1,17 @@
+{
+  "name": "nss-mamoc-workspace",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "cd server && npm run dev",
+    "dev:client": "npm run dev",
+    "build": "npm run build",
+    "start:server": "cd server && npm start",
+    "start:production": "concurrently \"npm run start:server\" \"npm run preview\"",
+    "db:setup": "cd server && npm run db:generate && npm run db:push",
+    "db:seed": "cd server && npm run db:seed"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

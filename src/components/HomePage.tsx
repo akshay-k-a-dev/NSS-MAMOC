@@ -3,37 +3,11 @@ import { motion, useAnimation } from 'framer-motion';
 import { Calendar, Award, MapPin, Clock, User } from 'lucide-react';
 import { Program } from '../types';
 
-interface HomepageImage {
-  id: string;
-  src: string;
-  alt: string;
-  type: 'left' | 'right';
-}
-
 interface HomePageProps {
   programs: Program[];
-  leftImages?: HomepageImage[];
-  rightImages?: HomepageImage[];
 }
 
-// Mock image data for scrolling boxes - in real implementation, these would come from props or state
-const leftImages: HomepageImage[] = [
-  { id: '1', src: '/download.png', alt: 'NSS Activity 1', type: 'left' },
-  { id: '2', src: '/mamo-logo.png', alt: 'NSS Activity 2', type: 'left' },
-  { id: '3', src: '/download.png', alt: 'NSS Activity 3', type: 'left' },
-  { id: '4', src: '/mamo-logo.png', alt: 'NSS Activity 4', type: 'left' },
-  { id: '5', src: '/download.png', alt: 'NSS Activity 5', type: 'left' },
-  { id: '6', src: '/mamo-logo.png', alt: 'NSS Activity 6', type: 'left' },
-];
 
-const rightImages: HomepageImage[] = [
-  { id: '7', src: '/mamo-logo.png', alt: 'NSS Activity 7', type: 'right' },
-  { id: '8', src: '/download.png', alt: 'NSS Activity 8', type: 'right' },
-  { id: '9', src: '/mamo-logo.png', alt: 'NSS Activity 9', type: 'right' },
-  { id: '10', src: '/download.png', alt: 'NSS Activity 10', type: 'right' },
-  { id: '11', src: '/mamo-logo.png', alt: 'NSS Activity 11', type: 'right' },
-  { id: '12', src: '/download.png', alt: 'NSS Activity 12', type: 'right' },
-];
 
 // Animated Counter Component
 const AnimatedCounter: React.FC<{ end: number; duration?: number; suffix?: string }> = ({ 
@@ -127,83 +101,15 @@ const FloatingElements: React.FC = () => (
   </div>
 );
 
-// Scrolling Image Box Component
-const ScrollingImageBox: React.FC<{
-  images: typeof leftImages;
-  direction: 'down' | 'up' | 'left' | 'right';
-  className?: string;
-}> = ({ images, direction, className = '' }) => {
-  const [isHovered, setIsHovered] = useState(false);
 
-  // Determine if it's horizontal or vertical scrolling
-  const isHorizontal = direction === 'left' || direction === 'right';
-  const isVertical = direction === 'up' || direction === 'down';
 
-  return (
-    <div 
-      className={`overflow-hidden rounded-2xl bg-white/10 backdrop-blur-sm shadow-2xl border border-white/20 ${className}`}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
-      <motion.div
-        className={isHorizontal ? "flex space-x-4 p-4" : "flex flex-col space-y-4 p-4"}
-        animate={{
-          x: isHorizontal 
-            ? direction === 'right'
-              ? isHovered ? 0 : -images.length * 200
-              : isHovered ? 0 : images.length * 200
-            : 0,
-          y: isVertical
-            ? direction === 'down' 
-              ? isHovered ? 0 : -images.length * 280 
-              : isHovered ? 0 : images.length * 280
-            : 0,
-        }}
-        transition={{
-          duration: isHovered ? 0.3 : images.length * 3,
-          ease: "linear",
-          repeat: isHovered ? 0 : Infinity,
-        }}
-        style={{
-          animation: isHovered ? 'none' : 
-            isHorizontal 
-              ? `scroll${direction === 'right' ? 'Right' : 'Left'} ${images.length * 3}s linear infinite`
-              : `scroll${direction === 'down' ? 'Down' : 'Up'} ${images.length * 3}s linear infinite`
-        }}
-      >
-        {/* Duplicate images for seamless loop */}
-        {[...images, ...images].map((image, index) => (
-          <motion.div
-            key={`${image.id}-${index}`}
-            className={`rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 ${
-              isHorizontal ? 'w-48 h-full flex-shrink-0' : 'w-full h-64'
-            }`}
-            whileHover={{ scale: 1.05 }}
-          >
-            <img
-              src={image.src}
-              alt={image.alt}
-              className="w-full h-full object-cover"
-              loading="lazy"
-            />
-          </motion.div>
-        ))}
-      </motion.div>
-    </div>
-  );
-};
-
-export const HomePage: React.FC<HomePageProps> = ({ programs, leftImages: propLeftImages, rightImages: propRightImages }) => {
+export const HomePage: React.FC<HomePageProps> = ({ programs }) => {
   const [collegeImageVisible, setCollegeImageVisible] = useState<boolean>(true);
   const [collegeTriedAlt, setCollegeTriedAlt] = useState<boolean>(false);
   
-  // Use prop images if available, otherwise fall back to mock data
-  const displayLeftImages = propLeftImages || leftImages;
-  const displayRightImages = propRightImages || rightImages;
-  
   const upcomingPrograms = programs
-    .filter(program => new Date(program.date) >= new Date())
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    .filter(program => new Date(program.startDate || program.date || '') >= new Date())
+    .sort((a, b) => new Date(a.startDate || a.date || '').getTime() - new Date(b.startDate || b.date || '').getTime())
     .slice(0, 3);
 
   return (
@@ -214,19 +120,9 @@ export const HomePage: React.FC<HomePageProps> = ({ programs, leftImages: propLe
         
         <div className="relative z-10 py-16 flex items-center">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-            <div className="flex flex-col lg:flex-row items-center justify-between gap-8 lg:gap-20">
-              
-              {/* Left Scrolling Box - Hidden on mobile, shown below on tablet */}
-              <div className="hidden lg:block">
-                <ScrollingImageBox 
-                  images={displayLeftImages} 
-                  direction="down" 
-                  className="h-[600px] w-56"
-                />
-              </div>
-
+            <div className="flex justify-center">
               {/* Center Content */}
-              <div className="flex-1 text-center max-w-4xl">
+              <div className="text-center max-w-4xl">
                 <motion.div
                   initial={{ opacity: 0, y: 30 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -353,34 +249,6 @@ export const HomePage: React.FC<HomePageProps> = ({ programs, leftImages: propLe
                 </motion.div>
               </div>
 
-              {/* Right Scrolling Box - Hidden on mobile, shown below on tablet */}
-              <div className="hidden lg:block">
-                <ScrollingImageBox 
-                  images={displayRightImages} 
-                  direction="up" 
-                  className="h-[600px] w-56"
-                />
-              </div>
-            </div>
-
-            {/* Mobile/Tablet Scrolling Boxes - shown below center content */}
-            <div className="lg:hidden mt-12">
-              <div className="mb-8">
-                <h3 className="text-lg font-semibold text-white/90 mb-4 text-center">NSS Activities</h3>
-                <ScrollingImageBox 
-                  images={displayLeftImages} 
-                  direction="right" 
-                  className="h-48 w-full"
-                />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-white/90 mb-4 text-center">Community Service</h3>
-                <ScrollingImageBox 
-                  images={displayRightImages} 
-                  direction="left" 
-                  className="h-48 w-full"
-                />
-              </div>
             </div>
 
           </div>
@@ -651,7 +519,7 @@ export const HomePage: React.FC<HomePageProps> = ({ programs, leftImages: propLe
                         whileHover={{ scale: 1.05 }}
                         className="text-sm text-gray-600 font-medium bg-gray-100 px-3 py-1 rounded-full"
                       >
-                        {new Date(program.date).toLocaleDateString()}
+                        {new Date(program.startDate || program.date || '').toLocaleDateString()}
                       </motion.div>
                     </div>
                     

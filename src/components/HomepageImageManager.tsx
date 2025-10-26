@@ -24,28 +24,101 @@ export const HomepageImageManager: React.FC<HomepageImageManagerProps> = ({
   const leftFileInputRef = useRef<HTMLInputElement>(null);
   const rightFileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileUpload = (files: FileList | null, type: 'left' | 'right') => {
+  const handleFileUpload = async (files: FileList | null, type: 'left' | 'right') => {
     if (!files) return;
 
-    const newImages: HomepageImage[] = Array.from(files).map((file, index) => ({
-      id: `img-${Date.now()}-${index}`,
-      src: URL.createObjectURL(file),
-      alt: `NSS Activity ${type === 'left' ? 'Left' : 'Right'} ${leftImages.length + rightImages.length + index + 1}`,
-      type,
-    }));
+    try {
+      const uploadPromises = Array.from(files).map(async (file, index) => {
+        const formData = new FormData();
+        formData.append('image', file);
+        formData.append('type', type);
+        formData.append('alt', `NSS Activity ${type === 'left' ? 'Left' : 'Right'} ${leftImages.length + rightImages.length + index + 1}`);
 
-    if (type === 'left') {
-      onUpdateImages([...leftImages, ...newImages], rightImages);
-    } else {
-      onUpdateImages(leftImages, [...rightImages, ...newImages]);
+        const response = await fetch('http://localhost:3001/api/homepage-images', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          let errorMessage = 'Failed to upload image';
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorMessage;
+          } catch {
+            // If JSON parsing fails, use response text or status
+            try {
+              const errorText = await response.text();
+              errorMessage = errorText || `HTTP ${response.status}: ${response.statusText}`;
+            } catch {
+              errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+            }
+          }
+          throw new Error(errorMessage);
+        }
+
+        try {
+          return await response.json();
+        } catch (parseError) {
+          console.error('Failed to parse response JSON:', parseError);
+          throw new Error('Server returned invalid JSON response');
+        }
+      });
+
+      const uploadedImages = await Promise.all(uploadPromises);
+      
+      // Transform API response to component format
+      const newImages: HomepageImage[] = uploadedImages.map(img => ({
+        id: img.id,
+        src: img.url,
+        alt: img.alt,
+        type: img.type,
+      }));
+
+      if (type === 'left') {
+        onUpdateImages([...leftImages, ...newImages], rightImages);
+      } else {
+        onUpdateImages(leftImages, [...rightImages, ...newImages]);
+      }
+
+      alert(`Successfully uploaded ${newImages.length} images!`);
+    } catch (error) {
+      console.error('Error uploading images:', error);
+      alert(`Failed to upload images: ${error instanceof Error ? error.message : 'Please try again.'}`);
     }
   };
 
-  const handleDeleteImage = (imageId: string, type: 'left' | 'right') => {
-    if (type === 'left') {
-      onUpdateImages(leftImages.filter(img => img.id !== imageId), rightImages);
-    } else {
-      onUpdateImages(leftImages, rightImages.filter(img => img.id !== imageId));
+  const handleDeleteImage = async (imageId: string, type: 'left' | 'right') => {
+    try {
+      const response = await fetch(`http://localhost:3001/api/homepage-images/${imageId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        let errorMessage = 'Failed to delete image';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch {
+          try {
+            const errorText = await response.text();
+            errorMessage = errorText || `HTTP ${response.status}: ${response.statusText}`;
+          } catch {
+            errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+          }
+        }
+        throw new Error(errorMessage);
+      }
+
+      if (type === 'left') {
+        onUpdateImages(leftImages.filter(img => img.id !== imageId), rightImages);
+      } else {
+        onUpdateImages(leftImages, rightImages.filter(img => img.id !== imageId));
+      }
+
+      alert('Image deleted successfully!');
+    } catch (error) {
+      console.error('Error deleting image:', error);
+      alert(`Failed to delete image: ${error instanceof Error ? error.message : 'Please try again.'}`);
     }
   };
 

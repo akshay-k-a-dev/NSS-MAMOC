@@ -14,10 +14,10 @@ export const ProgramsPage: React.FC<ProgramsPageProps> = ({ programs }) => {
   const filteredPrograms = programs.filter(program => {
     const searchLower = searchTerm.toLowerCase();
     const matchesSearch = program.title.toLowerCase().includes(searchLower) ||
-                         program.description.toLowerCase().includes(searchLower);
+                         (program.description || '').toLowerCase().includes(searchLower);
     
     const now = new Date();
-    const programDate = new Date(program.date);
+    const programDate = new Date(program.startDate || program.date || '');
     
     const matchesFilter = filterType === 'all' || 
                          (filterType === 'upcoming' && programDate >= now) ||
@@ -27,11 +27,11 @@ export const ProgramsPage: React.FC<ProgramsPageProps> = ({ programs }) => {
   });
 
   const sortedPrograms = [...filteredPrograms].sort((a, b) => 
-    new Date(b.date).getTime() - new Date(a.date).getTime()
+    new Date(b.startDate || b.date || '').getTime() - new Date(a.startDate || a.date || '').getTime()
   );
 
-  const upcomingCount = programs.filter(p => new Date(p.date) >= new Date()).length;
-  const completedCount = programs.filter(p => new Date(p.date) < new Date()).length;
+  const upcomingCount = programs.filter(p => new Date(p.startDate || p.date || '') >= new Date()).length;
+  const completedCount = programs.filter(p => new Date(p.startDate || p.date || '') < new Date()).length;
   const totalParticipants = programs.reduce((sum, program) => sum + (program.participantIds?.length || 0), 0);
 
   return (
@@ -137,7 +137,7 @@ export const ProgramsPage: React.FC<ProgramsPageProps> = ({ programs }) => {
             </div>
           ) : (
             sortedPrograms.map((program) => {
-              const isUpcoming = new Date(program.date) >= new Date();
+              const isUpcoming = new Date(program.startDate || program.date || '') >= new Date();
               const participantCount = program.participantIds?.length || 0;
               
               return (
@@ -169,15 +169,15 @@ export const ProgramsPage: React.FC<ProgramsPageProps> = ({ programs }) => {
                       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm text-gray-600">
                         <div className="flex items-center space-x-2">
                           <Calendar size={16} />
-                          <span>{new Date(program.date).toLocaleDateString()}</span>
+                          <span>{new Date(program.startDate || program.date || '').toLocaleDateString()}</span>
                         </div>
                         <div className="flex items-center space-x-2">
                           <Clock size={16} />
-                          <span>{program.time}</span>
+                          <span>{program.endDate ? new Date(program.endDate).toLocaleDateString() : (program.time || 'TBD')}</span>
                         </div>
                         <div className="flex items-center space-x-2">
                           <MapPin size={16} />
-                          <span>{program.venue}</span>
+                          <span>{program.department || program.venue || 'TBD'}</span>
                         </div>
                         <div className="flex items-center space-x-2">
                           <User size={16} />

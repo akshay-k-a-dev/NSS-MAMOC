@@ -40,11 +40,11 @@ const drawPage = async (
   // Load logos
   let nssImg: HTMLImageElement | null = null;
   let collegeImg: HTMLImageElement | null = null;
-  try { nssImg = await loadImage('/download.png'); } catch {}
+  try { nssImg = await loadImage('/download.png'); } catch { /* Image load failed, continue without logo */ }
   try {
     try { collegeImg = await loadImage('/mamo-logo.png'); }
     catch { try { collegeImg = await loadImage('/mamo%20logo.png'); } catch { collegeImg = await loadImage('/college-logo.png'); } }
-  } catch {}
+  } catch { /* Fallback image loading failed, continue without college logo */ }
 
   // Draw logos
   const leftLogoX = 90, leftLogoY = headerY + headerHeight / 2, leftR = 70;
@@ -84,9 +84,24 @@ const drawPage = async (
   ctx.fillText(`Department: ${departmentName}`, 80, metaStartY);
   ctx.fillText(`Program: ${program.title}`, 80, metaStartY + 34);
   ctx.font = '18px serif';
-  const programDateStr = new Date(program.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
-  ctx.fillText(`Date: ${programDateStr}   Time: ${program.time}`, 80, metaStartY + 64);
-  ctx.fillText(`Venue: ${program.venue}`, 80, metaStartY + 92);
+  
+  // Handle both old and new date formats
+  const programDate = program.startDate || program.date;
+  const programTime = program.startDate ? new Date(program.startDate).toLocaleTimeString('en-US', { 
+    hour12: false, 
+    hour: '2-digit', 
+    minute: '2-digit' 
+  }) : program.time;
+  const programVenue = program.department || program.venue || 'TBD';
+  
+  const programDateStr = programDate ? new Date(programDate).toLocaleDateString('en-IN', { 
+    day: 'numeric', 
+    month: 'long', 
+    year: 'numeric' 
+  }) : 'TBD';
+  
+  ctx.fillText(`Date: ${programDateStr}   Time: ${programTime || 'TBD'}`, 80, metaStartY + 64);
+  ctx.fillText(`Venue: ${programVenue}`, 80, metaStartY + 92);
 
   // Table header
   const tableStartY = metaStartY + 120;

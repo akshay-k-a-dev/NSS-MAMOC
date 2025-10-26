@@ -7,7 +7,7 @@ interface ProgramOfficerPortalProps {
   coordinators: Coordinator[];
   departments: import('../types').Department[];
   programs: import('../types').Program[];
-  onAddStudent: (student: Omit<RegisteredStudent, 'id' | 'createdAt'>) => void;
+  onAddStudent: (student: Omit<RegisteredStudent, 'createdAt'>) => void;
   onAddCoordinator: (coordinator: Omit<Coordinator, 'id' | 'createdAt'>) => void;
   onToggleCoordinatorAccess: (id: string) => void;
   onDeleteStudent: (id: string) => void;
@@ -90,14 +90,21 @@ export const ProgramOfficerPortal: React.FC<ProgramOfficerPortalProps> = ({
   const [studentForm, setStudentForm] = useState({
     id: '',
     name: '',
+    email: '',
+    phone: '',
     department: '',
+    year: '',
+    enrollmentNumber: '',
     password: '',
     profileImageUrl: '' as string | undefined,
   });
   
   const [coordinatorForm, setCoordinatorForm] = useState({
     name: '',
+    email: '',
+    phone: '',
     department: '',
+    position: '',
     password: '',
   });
 
@@ -126,12 +133,26 @@ export const ProgramOfficerPortal: React.FC<ProgramOfficerPortalProps> = ({
     const newStudent = {
       id: studentForm.id,
       name: studentForm.name,
+      email: studentForm.email,
+      phone: studentForm.phone,
       department: studentForm.department,
+      year: studentForm.year,
+      enrollmentNumber: studentForm.enrollmentNumber,
       password: studentForm.password,
       profileImageUrl: studentForm.profileImageUrl || undefined,
     };
-    onAddStudent(newStudent as any);
-    setStudentForm({ id: '', name: '', department: '', password: '', profileImageUrl: '' });
+    onAddStudent(newStudent);
+    setStudentForm({ 
+      id: '', 
+      name: '', 
+      email: '', 
+      phone: '', 
+      department: '', 
+      year: '', 
+      enrollmentNumber: '', 
+      password: '', 
+      profileImageUrl: '' 
+    });
     setShowForm(false);
   };
 
@@ -151,7 +172,14 @@ export const ProgramOfficerPortal: React.FC<ProgramOfficerPortalProps> = ({
       isActive: true,
     };
     onAddCoordinator(newCoordinator);
-    setCoordinatorForm({ name: '', department: '', password: '' });
+    setCoordinatorForm({ 
+      name: '', 
+      email: '', 
+      phone: '', 
+      department: '', 
+      position: '', 
+      password: '' 
+    });
     setShowForm(false);
   };
 
@@ -372,7 +400,7 @@ export const ProgramOfficerPortal: React.FC<ProgramOfficerPortalProps> = ({
                           <button
                             onClick={() => {
                               setEditingStudent(student);
-                              setEditForm({ name: student.name, department: student.department, password: student.password, profileImageUrl: student.profileImageUrl });
+                              setEditForm({ name: student.name, department: student.department, password: student.password || '', profileImageUrl: student.profileImageUrl || '' });
                             }}
                             className="text-gray-600 hover:bg-gray-100 p-2 rounded-lg transition-colors"
                             title="Edit student"
@@ -454,7 +482,7 @@ export const ProgramOfficerPortal: React.FC<ProgramOfficerPortalProps> = ({
                           <button
                             onClick={() => {
                               setEditingCoordinator(coordinator);
-                              setEditForm({ name: coordinator.name, department: coordinator.department, password: coordinator.password, profileImageUrl: '' });
+                              setEditForm({ name: coordinator.name, department: coordinator.department, password: coordinator.password || '', profileImageUrl: '' });
                             }}
                             className="text-gray-600 hover:bg-gray-100 p-2 rounded-lg transition-colors"
                             title="Edit coordinator"
@@ -566,62 +594,130 @@ export const ProgramOfficerPortal: React.FC<ProgramOfficerPortalProps> = ({
 
         {/* Add Form Modal */}
         {showForm && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl max-w-md w-full mx-4">
-              <div className="p-6 border-b border-gray-200">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+            <div className="bg-white rounded-xl w-full max-w-2xl md:max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden">
+              <div className="p-3 sm:p-4 md:p-6 border-b border-gray-200">
                 <div className="flex justify-between items-center">
-                  <h3 className="text-lg font-bold text-gray-900">
+                  <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900">
                     Add New {activeTab === 'students' ? 'Student' : 'Coordinator'}
                   </h3>
                   <button 
                     onClick={() => setShowForm(false)}
-                    className="text-gray-500 hover:text-gray-700"
+                    className="text-gray-500 hover:text-gray-700 p-1"
                   >
-                    <X size={24} />
+                    <X size={20} />
                   </button>
                 </div>
               </div>
               
-              <div className="p-6">
+              <div className="p-3 sm:p-4 md:p-6 max-h-[calc(95vh-120px)] sm:max-h-[calc(90vh-120px)] overflow-y-auto">
                 {activeTab === 'students' ? (
-                  <form onSubmit={handleStudentSubmit} className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Custom Student ID</label>
-                      <input
-                        type="text"
-                        required
-                        pattern="[A-Za-z0-9_-]+"
-                        value={studentForm.id}
-                        onChange={(e) => setStudentForm({ ...studentForm, id: e.target.value })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="e.g., CS24-001"
-                      />
-                      <p className="text-xs text-gray-500 mt-1">Letters, numbers, hyphen or underscore allowed.</p>
+                  <form onSubmit={handleStudentSubmit} className="space-y-3 sm:space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Custom Student ID</label>
+                        <input
+                          type="text"
+                          required
+                          pattern="[A-Za-z0-9_-]+"
+                          value={studentForm.id}
+                          onChange={(e) => setStudentForm({ ...studentForm, id: e.target.value })}
+                          className="w-full px-3 py-2 md:px-4 md:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm md:text-base"
+                          placeholder="e.g., CS24-001"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">Letters, numbers, hyphen or underscore allowed.</p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Student Name</label>
+                        <input
+                          type="text"
+                          required
+                          value={studentForm.name}
+                          onChange={(e) => setStudentForm({ ...studentForm, name: e.target.value })}
+                          className="w-full px-3 py-2 md:px-4 md:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm md:text-base"
+                          placeholder="Enter student name"
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Student Name</label>
-                      <input
-                        type="text"
-                        required
-                        value={studentForm.name}
-                        onChange={(e) => setStudentForm({ ...studentForm, name: e.target.value })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Enter student name"
-                      />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                        <input
+                          type="email"
+                          required
+                          value={studentForm.email}
+                          onChange={(e) => setStudentForm({ ...studentForm, email: e.target.value })}
+                          className="w-full px-3 py-2 md:px-4 md:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm md:text-base"
+                          placeholder="Enter email address"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Phone</label>
+                        <input
+                          type="tel"
+                          required
+                          value={studentForm.phone}
+                          onChange={(e) => setStudentForm({ ...studentForm, phone: e.target.value })}
+                          className="w-full px-3 py-2 md:px-4 md:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm md:text-base"
+                          placeholder="Enter phone number"
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Department</label>
-                      <select
-                        required
-                        value={studentForm.department}
-                        onChange={(e) => setStudentForm({ ...studentForm, department: e.target.value })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      >
-                        <option value="">Select a department</option>
-                        {departments.filter(d => d.isActive).map(dept => (
-                          <option key={dept.id} value={dept.name}>{dept.name}</option>
-                        ))}
-                      </select>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Year</label>
+                        <select
+                          required
+                          value={studentForm.year}
+                          onChange={(e) => setStudentForm({ ...studentForm, year: e.target.value })}
+                          className="w-full px-3 py-2 md:px-4 md:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm md:text-base"
+                        >
+                          <option value="">Select academic year</option>
+                          <option value="1st Year">1st Year</option>
+                          <option value="2nd Year">2nd Year</option>
+                          <option value="3rd Year">3rd Year</option>
+                          <option value="4th Year">4th Year</option>
+                          <option value="Post Graduate">Post Graduate</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Enrollment Number</label>
+                        <input
+                          type="text"
+                          required
+                          value={studentForm.enrollmentNumber}
+                          onChange={(e) => setStudentForm({ ...studentForm, enrollmentNumber: e.target.value })}
+                          className="w-full px-3 py-2 md:px-4 md:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm md:text-base"
+                          placeholder="Enter enrollment number"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Department</label>
+                        <select
+                          required
+                          value={studentForm.department}
+                          onChange={(e) => setStudentForm({ ...studentForm, department: e.target.value })}
+                          className="w-full px-3 py-2 md:px-4 md:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm md:text-base"
+                        >
+                          <option value="">Select a department</option>
+                          {departments.filter(d => d.isActive).map(dept => (
+                            <option key={dept.id} value={dept.name}>{dept.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                        <input
+                          type="text"
+                          required
+                          value={studentForm.password}
+                          onChange={(e) => setStudentForm({ ...studentForm, password: e.target.value })}
+                          className="w-full px-3 py-2 md:px-4 md:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm md:text-base"
+                          placeholder="Enter password"
+                        />
+                      </div>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Profile Picture (optional)</label>
@@ -631,40 +727,29 @@ export const ProgramOfficerPortal: React.FC<ProgramOfficerPortalProps> = ({
                         onChange={(e) => {
                           const file = e.target.files?.[0];
                           if (!file) return;
-                          if (file.size > 100 * 1024) {
-                            alert('Please select an image under 100KB.');
+                          if (file.size > 2 * 1024 * 1024) {
+                            alert('Please select an image under 2MB.');
                             e.currentTarget.value = '';
                             return;
                           }
                           const objectUrl = URL.createObjectURL(file);
                           setStudentForm({ ...studentForm, profileImageUrl: objectUrl });
                         }}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-3 py-2 md:px-4 md:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm md:text-base"
                       />
-                      <p className="text-xs text-gray-500 mt-1">Max size: 100KB</p>
+                      <p className="text-xs text-gray-500 mt-1">Max size: 2MB. Supports JPG, PNG, WebP</p>
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
-                      <input
-                        type="text"
-                        required
-                        value={studentForm.password}
-                        onChange={(e) => setStudentForm({ ...studentForm, password: e.target.value })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Enter password"
-                      />
-                    </div>
-                    <div className="flex justify-end space-x-3 pt-4">
+                    <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3 pt-4">
                       <button
                         type="button"
                         onClick={() => setShowForm(false)}
-                        className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                        className="w-full sm:w-auto px-4 py-2 text-gray-600 hover:text-gray-800 text-sm md:text-base"
                       >
                         Cancel
                       </button>
                       <button
                         type="submit"
-                        className="bg-blue-700 text-white px-6 py-2 rounded-lg hover:bg-blue-800 transition-colors flex items-center space-x-2"
+                        className="w-full sm:w-auto bg-blue-700 text-white px-6 py-2 rounded-lg hover:bg-blue-800 transition-colors flex items-center justify-center space-x-2 text-sm md:text-base"
                       >
                         <Save size={16} />
                         <span>Add Student</span>
@@ -672,42 +757,81 @@ export const ProgramOfficerPortal: React.FC<ProgramOfficerPortalProps> = ({
                     </div>
                   </form>
                 ) : (
-                  <form onSubmit={handleCoordinatorSubmit} className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Coordinator Name</label>
-                      <input
-                        type="text"
-                        required
-                        value={coordinatorForm.name}
-                        onChange={(e) => setCoordinatorForm({ ...coordinatorForm, name: e.target.value })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Enter coordinator name"
-                      />
+                  <form onSubmit={handleCoordinatorSubmit} className="space-y-3 sm:space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Coordinator Name</label>
+                        <input
+                          type="text"
+                          required
+                          value={coordinatorForm.name}
+                          onChange={(e) => setCoordinatorForm({ ...coordinatorForm, name: e.target.value })}
+                          className="w-full px-3 py-2 md:px-4 md:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm md:text-base"
+                          placeholder="Enter coordinator name"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                        <input
+                          type="email"
+                          required
+                          value={coordinatorForm.email}
+                          onChange={(e) => setCoordinatorForm({ ...coordinatorForm, email: e.target.value })}
+                          className="w-full px-3 py-2 md:px-4 md:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm md:text-base"
+                          placeholder="Enter email address"
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Department</label>
-                      <select
-                        required
-                        value={coordinatorForm.department}
-                        onChange={(e) => setCoordinatorForm({ ...coordinatorForm, department: e.target.value })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      >
-                        <option value="">Select a department</option>
-                        {departments.filter(d => d.isActive).map(dept => (
-                          <option key={dept.id} value={dept.name}>{dept.name}</option>
-                        ))}
-                      </select>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Phone</label>
+                        <input
+                          type="tel"
+                          required
+                          value={coordinatorForm.phone}
+                          onChange={(e) => setCoordinatorForm({ ...coordinatorForm, phone: e.target.value })}
+                          className="w-full px-3 py-2 md:px-4 md:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm md:text-base"
+                          placeholder="Enter phone number"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Position</label>
+                        <input
+                          type="text"
+                          required
+                          value={coordinatorForm.position}
+                          onChange={(e) => setCoordinatorForm({ ...coordinatorForm, position: e.target.value })}
+                          className="w-full px-3 py-2 md:px-4 md:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm md:text-base"
+                          placeholder="Enter position (e.g., Assistant Professor)"
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
-                      <input
-                        type="text"
-                        required
-                        value={coordinatorForm.password}
-                        onChange={(e) => setCoordinatorForm({ ...coordinatorForm, password: e.target.value })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Enter password"
-                      />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Department</label>
+                        <select
+                          required
+                          value={coordinatorForm.department}
+                          onChange={(e) => setCoordinatorForm({ ...coordinatorForm, department: e.target.value })}
+                          className="w-full px-3 py-2 md:px-4 md:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm md:text-base"
+                        >
+                          <option value="">Select a department</option>
+                          {departments.filter(d => d.isActive).map(dept => (
+                            <option key={dept.id} value={dept.name}>{dept.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                        <input
+                          type="text"
+                          required
+                          value={coordinatorForm.password}
+                          onChange={(e) => setCoordinatorForm({ ...coordinatorForm, password: e.target.value })}
+                          className="w-full px-3 py-2 md:px-4 md:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm md:text-base"
+                          placeholder="Enter password"
+                        />
+                      </div>
                     </div>
                     <div className="flex justify-end space-x-3 pt-4">
                       <button
@@ -1007,9 +1131,9 @@ export const ProgramOfficerPortal: React.FC<ProgramOfficerPortalProps> = ({
                             <span className="font-semibold text-gray-900">{p.title}</span>
                           </div>
                           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-2 text-sm text-gray-600">
-                            <div className="flex items-center space-x-2"><Calendar size={14} /><span>{new Date(p.date).toLocaleDateString()}</span></div>
-                            <div className="flex items-center space-x-2"><Clock size={14} /><span>{p.time}</span></div>
-                            <div className="flex items-center space-x-2"><MapPin size={14} /><span>{p.venue}</span></div>
+                            <div className="flex items-center space-x-2"><Calendar size={14} /><span>{new Date(p.startDate || p.date || '').toLocaleDateString()}</span></div>
+                            <div className="flex items-center space-x-2"><Clock size={14} /><span>{p.endDate ? new Date(p.endDate).toLocaleDateString() : (p.time || 'TBD')}</span></div>
+                            <div className="flex items-center space-x-2"><MapPin size={14} /><span>{p.department || p.venue || 'TBD'}</span></div>
                             <div className="flex items-center space-x-2"><Users size={14} /><span>{p.participantIds?.length || 0} participants</span></div>
                           </div>
                           <p className="text-sm text-gray-700 mt-2 line-clamp-3">{p.description}</p>
@@ -1028,9 +1152,9 @@ export const ProgramOfficerPortal: React.FC<ProgramOfficerPortalProps> = ({
                             <span className="font-semibold text-gray-900">{p.title}</span>
                           </div>
                           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-2 text-sm text-gray-600">
-                            <div className="flex items-center space-x-2"><Calendar size={14} /><span>{new Date(p.date).toLocaleDateString()}</span></div>
-                            <div className="flex items-center space-x-2"><Clock size={14} /><span>{p.time}</span></div>
-                            <div className="flex items-center space-x-2"><MapPin size={14} /><span>{p.venue}</span></div>
+                            <div className="flex items-center space-x-2"><Calendar size={14} /><span>{new Date(p.startDate || p.date || '').toLocaleDateString()}</span></div>
+                            <div className="flex items-center space-x-2"><Clock size={14} /><span>{p.endDate ? new Date(p.endDate).toLocaleDateString() : (p.time || 'TBD')}</span></div>
+                            <div className="flex items-center space-x-2"><MapPin size={14} /><span>{p.department || p.venue || 'TBD'}</span></div>
                             <div className="flex items-center space-x-2"><User size={14} /><span>{p.coordinatorIds?.map(id => {
                               const student = students.find(s => s.id === id);
                               return student ? student.name : id;

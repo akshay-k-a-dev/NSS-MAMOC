@@ -1,0 +1,40 @@
+name: Deploy to GitHub Pages
+
+permissions:
+  contents: write
+
+
+on:
+  push:
+    branches:
+      - main # or master, depending on your default branch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      # Check out the repository
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Set up Node.js environment with Node 18
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '22'
+
+      # Install dependencies
+      - name: Install dependencies
+        run: npm install
+
+      # Build the app with Vite
+      - name: Build the app
+        run: npm run build
+
+      # Deploy to GitHub Pages
+      - name: Deploy to GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          branch: gh-pages
+          folder: dist
+          token: ${{ secrets.GITHUB_TOKEN }}
